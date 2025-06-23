@@ -94,12 +94,12 @@ class CumulusApi:
     @staticmethod
     def __add_query_string_parameters(**kwargs):
         qsp = {}
-        if 'searchContext' in kwargs:
-            # We need to slice the search context string to remove the first and last 3 characters as there are extra
-            # characters that will cause an error. Example %5B1692388761773%5D
-            context_list = [kwargs.pop('searchContext')[3:-3]]
-            # The searchContext must be a list containing a json string of a list ['[1234]']
-            qsp.update({'searchContext': json.dumps(context_list)})
+        # if 'searchContext' in kwargs:
+        #     # We need to slice the search context string to remove the first and last 3 characters as there are extra
+        #     # characters that will cause an error. Example %5B1692388761773%5D
+        #     context_list = [kwargs.pop('searchContext')[3:-3]]
+        #     # The searchContext must be a list containing a json string of a list ['[1234]']
+        #     qsp.update({'searchContext': json.dumps(context_list)})
 
         for k, v in kwargs.items():
             temp_lst = [str(v)]
@@ -182,7 +182,7 @@ class CumulusApi:
 
     def list_providers(self, **kwargs):
         """
-        List granules in the Cumulus system
+        List providers in the Cumulus system
         :param kwargs: cumulus query strings and parameters
         :return:
         """
@@ -289,13 +289,22 @@ class CumulusApi:
 
     # ============== Granules ===============
 
-    def list_granules(self, **kwargs):
+    def list_granules(self, getRecoveryStatus=False, includeFullRecord=False, estimateTableRowCount=True, **kwargs):
         """
         List granules in the Cumulus system
+        :param getRecoveryStatus: If the query includes a vlue of true for getRecoveryStatus,
+        recoveryStatus will be included in each granule's return value when applicable
+        :param includeFullRecord: If the query string parameters include a value of true
+        for includeFullRecord, any associated files and executions will be included in
+        each granule's return value. The default value is false.
+        :param estimateTableRowCount: For requests without filters, if the query string
+        parameters include a value of false for estimateTableRowCount, the returned
+        count will be actual exact count, otherwise it will be an estimated count.
+        The default value is true.
         :param kwargs: cumulus query strings and parameters
         :return:
         """
-        record_type = "granules"
+        record_type = f"granules?includeFullRecord={includeFullRecord}&getRecoveryStatus={getRecoveryStatus}&estimateTableRowCount={estimateTableRowCount}"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET, **kwargs)
 
     def get_granule(self, collection_id='', granule_id='', **kwargs):
@@ -320,9 +329,26 @@ class CumulusApi:
         record_type = "granules"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, data=data)
 
+    def replace_granule(self, data):
+        """
+        Replace an existing granule. Expects payload to contain the modified parts
+        of the granule and the existing granule values will be overwritten by the
+        modified portions. Any unspecified values will be removed, and appropriate
+        fields will be replaced with defaults. Executions associated will not be
+        modified if not specified.
+        :param data: json object containing updated granule definition
+        :return: Request response
+        """
+        record_type = f'granules/{data.get("collectionId")}/{data.get("granuleId")}'
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.PUT, data=data)
+
     def update_granule(self, data):
         """
-        Updates a granule
+        Updates an existing granule. Expects payload to contain the modified
+        parts of the granule as the exisiting granule will be overwritten
+        by the modified portions. Unspecified keys will be retained. Keys 
+        set to null will be removed. Executions will not be disassociated
+        from the granule via null deletion.
         :param data: json object containing updated granule definition
         :return: Request response
         """
@@ -392,10 +418,6 @@ class CumulusApi:
         data = {"action": "removeFromCmr"}
         return self.__crud_records(record_type=record_type, data=data, verb=self.allowed_verbs.PATCH)
 
-    def replace_granule(self, data):
-        record_type = f'granules/{data.get("collectionId")}/{data.get("granuleId")}'
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.PUT, data=data)
-
     def delete_granule(self, collection_id='', granule_id=''):
         """
         Delete a granule from Cumulus. It must already be removed from CMR.
@@ -434,6 +456,37 @@ class CumulusApi:
         :return: Request response
         """
         record_type = "granules/bulkReingest"
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, data=data)
+
+    def bulk_patch_granule_collection(self, data):
+        """
+        Updates a patch of existing granules' linked collection (collectionId)
+        in postgres. Expects payload to contain a list of granules and a new
+        collectionId to update them to.
+        :param data:
+        :return: Request response
+        """
+        record_type = "granules/bulkPatchGranuleCollection"
+
+    def bulk_patch(self, data):
+        """
+        Updates a batch of granules. Expects payload to contain a list of
+        the modified granules as the existing granule value will be 
+        overwritten by the modified portions. 
+        :param data:
+        :return: Request response
+        """
+        record_type = "granules/bulkPatch"
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.PATCH, data=data)
+
+    def bulk_change_collection(self, data):
+        """
+        Update a batch of granules, 'moving' them from one collection to
+        another via a triggered workflow.
+        :param data: 
+        :return: Request response
+        """
+        record_type = "granules/bulkChangeCollection"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, data=data)
 
     # ============== PDRs ===============
@@ -495,16 +548,6 @@ class CumulusApi:
         record_type = "rules"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, data=data)
 
-    def update_rule(self, data):
-        """
-        Update state and/or rule.value of a rule.
-        :param data: Can accept the whole rule object, or just a subset of fields, the ones that
-        are being updated.
-        :return: Returns a mapping of the updated properties.
-        """
-        record_type = f"rules/{data['name']}"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.PATCH, data=data)
-
     def replace_rule(self, data):
         """
         Replace an existing rule. Expects payload to specify the entire rule object, and will
@@ -514,6 +557,18 @@ class CumulusApi:
         """
         record_type = f"rules/{data.get('name')}"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.PUT, data=data)
+
+    def update_rule(self, data):
+        """
+        Update an existing rule. Expects payload to contain the modified and/or
+        additional fields of the rule and the exisitng rule values will be 
+        overwritten by the modified portions. Unspecified keys will be retained.
+        Keys set to null will be removed
+        :param data: json object containing updated rule definition
+        :return: Returns a mapping of the updated properties.
+        """
+        record_type = f"rules/{data['name']}"
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.PATCH, data=data)
 
     def delete_rule(self, rule_name):
         """
@@ -544,13 +599,15 @@ class CumulusApi:
         record_type = "stats"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET)
 
-    def get_stats_aggregate(self, **kwargs):
+    def get_stats_aggregate(self, type, field, **kwargs):
         """
         Count the value frequencies for a given field, for a given type of record in Cumulus
+        :param type: type of Cumulus record to query
+        :param field: which field to count frequencies for
         :param kwargs: Cumulus query strings and parameters
         :return:
         """
-        record_type = "stats/aggregate"
+        record_type = f"stats/aggregate?type={type}&field={field}"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET, **kwargs)
 
     # ============== Logs ===============
@@ -661,7 +718,7 @@ class CumulusApi:
 
     def get_workflow(self, workflow_name, **kwargs):
         """
-        List workflows
+        Get a workflow
         :param workflow_name: The name of the workflow to retrieve
         :param kwargs: Cumulus query strings and parameters
         :return:
@@ -758,58 +815,6 @@ class CumulusApi:
         record_type = "instanceMeta"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET)
 
-    # ============== Elasticsearch ===============
-
-    def reindex_elasticsearch(self, **kwargs):
-        """
-        Create a new index and reindexes the source index to the new, destination index
-        :param kwargs: Cumulus query strings and parameters
-        :return: Request response
-        """
-        record_type = "elasticsearch/reindex"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, **kwargs)
-
-    def get_elasticsearch_reindex_status(self):
-        """
-        Get the status of your reindex and the status of your indices.
-        :return: Request response
-        """
-        record_type = "elasticsearch/reindex-status"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET)
-
-    def update_elasticsearch_index(self, data):
-        """
-        Switch the Elasticsearch index to point to the new index, rather than the current index.
-        :return: Request response
-        """
-        record_type = "elasticsearch/change-index"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.PUT, data=data)
-
-    def reindex_elasticsearh_from_database(self, **kwargs):
-        """
-        Reindex your data from the database
-        :param kwargs: cumulus query strings and parameters
-        :return: Request response
-        """
-        record_type = "elasticsearch/index-from-database"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, **kwargs)
-
-    def get_elasticsearch_indices_info(self):
-        """
-        Get information about your elasticsearch indices
-        :return: Request response
-        """
-        record_type = "elasticsearch/indices-status"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET)
-
-    def get_elasticsearch_index(self):
-        """
-        Get the current aliased index being used by the Cumulus Elasticsearch instance.
-        :return: Request response
-        """
-        record_type = "elasticsearch/current-index"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET)
-
     # ============== Dashboard ===============
 
     def serve_dashboard_from_bucket(self, bucket, key):
@@ -821,6 +826,16 @@ class CumulusApi:
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET)
 
     # ============== ORCA ===============
+
+    def post_orca(self, **kwargs):
+        """
+        This endpoint authenticates and forwards requests to the ORCA
+        private API, and returns the response from the ORCA API.
+        :return: Request response
+        """
+        record_type = "orca"
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, **kwargs)
+
 
     # def list_orca_recovery_status(self, **kwargs):
     #     """
@@ -837,18 +852,6 @@ class CumulusApi:
     #     """
     #     record_type = "orca"
     #     return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, **kwargs)
-
-    # ============== Migration Counts ===============
-
-    def run_migration_count(self, **kwargs):
-        """
-        Trigger a run of the postgres-migration-count-tool as an async operation of type Migration
-        Count Report.
-        :param kwargs: Cumulus query strings and parameters
-        :return: Request response
-        """
-        record_type = "migrationCounts"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, **kwargs)
 
     # ============== Dead Letter Archive ===============
     def recover_cumulus_messages(self, bucket: str = None, path: str = None) -> dict:
