@@ -94,13 +94,6 @@ class CumulusApi:
     @staticmethod
     def __add_query_string_parameters(**kwargs):
         qsp = {}
-        # if 'searchContext' in kwargs:
-        #     # We need to slice the search context string to remove the first and last 3 characters as there are extra
-        #     # characters that will cause an error. Example %5B1692388761773%5D
-        #     context_list = [kwargs.pop('searchContext')[3:-3]]
-        #     # The searchContext must be a list containing a json string of a list ['[1234]']
-        #     qsp.update({'searchContext': json.dumps(context_list)})
-
         for k, v in kwargs.items():
             temp_lst = [str(v)]
             qsp.update({k: temp_lst})
@@ -467,6 +460,7 @@ class CumulusApi:
         :return: Request response
         """
         record_type = "granules/bulkPatchGranuleCollection"
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.PATCH, data=data)
 
     def bulk_patch(self, data):
         """
@@ -835,23 +829,6 @@ class CumulusApi:
         """
         record_type = "orca"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, **kwargs)
-
-
-    # def list_orca_recovery_status(self, **kwargs):
-    #     """
-    #     List ORCA recovery request status.
-    #     :return: Request response
-    #     """
-    #     record_type = "orca/recovery"
-    #     return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET, **kwargs)
-    #
-    # def post_orca(self, **kwargs):
-    #     """
-    #     List ORCA recovery request status.
-    #     :return: Request response
-    #     """
-    #     record_type = "orca"
-    #     return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, **kwargs)
 
     # ============== Dead Letter Archive ===============
     def recover_cumulus_messages(self, bucket: str = None, path: str = None) -> dict:
