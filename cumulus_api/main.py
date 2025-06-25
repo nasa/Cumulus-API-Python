@@ -288,15 +288,6 @@ class CumulusApi:
     def list_granules(self, **kwargs):
         """
         List granules in the Cumulus system
-        :param getRecoveryStatus: If the query includes a vlue of true for getRecoveryStatus,
-        recoveryStatus will be included in each granule's return value when applicable
-        :param includeFullRecord: If the query string parameters include a value of true
-        for includeFullRecord, any associated files and executions will be included in
-        each granule's return value. The default value is false.
-        :param estimateTableRowCount: For requests without filters, if the query string
-        parameters include a value of false for estimateTableRowCount, the returned
-        count will be actual exact count, otherwise it will be an estimated count.
-        The default value is true.
         :param kwargs: cumulus query strings and parameters
         :return:
         """
@@ -596,15 +587,13 @@ class CumulusApi:
         record_type = "stats"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET)
 
-    def get_stats_aggregate(self, type, field, **kwargs):
+    def get_stats_aggregate(self, **kwargs):
         """
         Count the value frequencies for a given field, for a given type of record in Cumulus
-        :param type: type of Cumulus record to query
-        :param field: which field to count frequencies for
         :param kwargs: Cumulus query strings and parameters
         :return:
         """
-        record_type = f"stats/aggregate?type={type}&field={field}"
+        record_type = f"stats/aggregate"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET, **kwargs)
 
     # ============== Logs ===============
