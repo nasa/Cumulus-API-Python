@@ -74,10 +74,13 @@ class CumulusApi:
         :param data: json data to be ingested
         :return: False in case of error
         """
+        converted_bool_type_expected = ["countOnly", "getRecoveryStatus", "includeFullRecord", "estimateTableRowCount"]
         url = f"{self.INVOKE_BASE_URL}/v1/{record_type}"
         and_sign = ""
         query = ""
         for key, value in kwargs.items():
+            if key in converted_bool_type_expected:
+                value = str(value).lower()
             query = f"{query}{and_sign}{key}={value}"
             and_sign = "&"
         if kwargs:
@@ -282,7 +285,7 @@ class CumulusApi:
 
     # ============== Granules ===============
 
-    def list_granules(self, getRecoveryStatus=False, includeFullRecord=False, estimateTableRowCount=True, **kwargs):
+    def list_granules(self, **kwargs):
         """
         List granules in the Cumulus system
         :param getRecoveryStatus: If the query includes a vlue of true for getRecoveryStatus,
@@ -298,9 +301,6 @@ class CumulusApi:
         :return:
         """
         record_type = "granules"
-        kwargs['getRecoveryStatus'] = str(getRecoveryStatus).lower()
-        kwargs['includeFullRecord'] = str(includeFullRecord).lower()
-        kwargs['estimateTableRowCount'] = str(estimateTableRowCount).lower()
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET, **kwargs)
 
     def get_granule(self, collection_id='', granule_id='', **kwargs):
