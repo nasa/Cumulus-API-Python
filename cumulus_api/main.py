@@ -297,7 +297,10 @@ class CumulusApi:
         :param kwargs: cumulus query strings and parameters
         :return:
         """
-        record_type = f"granules?includeFullRecord={includeFullRecord}&getRecoveryStatus={getRecoveryStatus}&estimateTableRowCount={estimateTableRowCount}"
+        record_type = "granules"
+        kwargs['getRecoveryStatus'] = str(getRecoveryStatus).lower()
+        kwargs['includeFullRecord'] = str(includeFullRecord).lower()
+        kwargs['estimateTableRowCount'] = str(estimateTableRowCount).lower()
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET, **kwargs)
 
     def get_granule(self, collection_id='', granule_id='', **kwargs):
