@@ -11,7 +11,7 @@ install_requires = [x.strip() for x in reqs]
 
 setup(
     name='cumulus-api',
-    version='3.0.6',
+    version='3.1.0',
     author='Abdelhak Marouane',
     description='Python package using Cumulus API which allows developers to interact with the Cumulus Framework,'
                 ' such as monitoring status or creating, editing, and deleting records ',

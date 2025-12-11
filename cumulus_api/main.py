@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import boto3
 from requests import Session
+from urllib.parse import quote
 
 from .cumulus_token import CumulusToken
 
@@ -156,7 +157,7 @@ class CumulusApi:
         else:
             data = {"token": self.TOKEN}
             refreshed_token = self.__crud_records(record_type="refresh", verb=self.allowed_verbs.POST, data=data)
-            self.TOKEN = refreshed_token
+            self.TOKEN = refreshed_token["token"]
         self.HEADERS = {
             'Authorization': f'Bearer {self.TOKEN}',
             'Cumulus-API-Version': '2',
@@ -207,7 +208,7 @@ class CumulusApi:
     def update_provider(self, data):
         """
         Update values for a provider
-        :param data: json object containing provider definition
+        :param data: json object containing entire provider definition
         :return: message of success or raise error
         """
         record_type = f"providers/{data['id']}"
@@ -265,8 +266,7 @@ class CumulusApi:
     def update_collection(self, data):
         """
         Update values for a collection
-        :param data: json object containing updated collection definition
-        the ones that are being updated.
+        :param data: json object containing entire collection definition
         :return:
         """
         record_type = f"collections/{data['name']}/{data['version']}"
@@ -294,7 +294,7 @@ class CumulusApi:
         record_type = "granules"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET, **kwargs)
 
-    def get_granule(self, collection_id='', granule_id='', **kwargs):
+    def get_granule(self, granule_id, collection_id='', **kwargs):
         """
         Get a granule
         :param granule_id: cumulus granule id
@@ -332,17 +332,14 @@ class CumulusApi:
     def update_granule(self, data):
         """
         Updates an existing granule. Expects payload to contain the modified
-        parts of the granule as the exisiting granule will be overwritten
+        parts of the granule as the existing granule will be overwritten
         by the modified portions. Unspecified keys will be retained. Keys 
         set to null will be removed. Executions will not be disassociated
         from the granule via null deletion.
         :param data: json object containing updated granule definition
         :return: Request response
         """
-        collection_id = data.get('collectionId', '')
-        if collection_id:
-            collection_id = f'{collection_id}/'
-        record_type = f"granules/{collection_id}{data.get('granuleId')}"
+        record_type = f'granules/{data.get("collectionId")}/{data.get("granuleId")}'
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.PATCH, data=data)
 
     def associate_execution(self, data):
@@ -405,7 +402,7 @@ class CumulusApi:
         data = {"action": "removeFromCmr"}
         return self.__crud_records(record_type=record_type, data=data, verb=self.allowed_verbs.PATCH)
 
-    def delete_granule(self, collection_id='', granule_id=''):
+    def delete_granule(self, granule_id, collection_id=''):
         """
         Delete a granule from Cumulus. It must already be removed from CMR.
         :param granule_id:
@@ -476,6 +473,17 @@ class CumulusApi:
         """
         record_type = "granules/bulkChangeCollection"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, data=data)
+
+    def get_granule_id_and_collection_by_file_location(self, bucket, key):
+        """
+        Retrieve granule ID and collection ID for a granule file by S3 bucket and key.
+        :param data:
+        :return: Request response
+        """
+        # Have to URL encode the variables
+        bucket, key = [quote(x, safe='') for x in [bucket, key.strip('/')]]
+        record_type = f'granules/files/get_collection_and_granule_id/{bucket}/{key}'
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET)
 
     # ============== PDRs ===============
 
@@ -678,6 +686,7 @@ class CumulusApi:
     def update_execution(self, data):
         """
         Update/replace an existing execution.
+        :param data: json object containing entire execution
         :return: Request response
         """
         record_type = f"executions/{data['arn']}"
@@ -690,6 +699,15 @@ class CumulusApi:
         """
         record_type = f"executions/{execution_arn}"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.DELETE)
+
+    def bulk_delete_executions_by_collection_id(self, data):
+        """
+        Removes all records from postgres db matching collection id
+        :param data: Description
+        :return: Return response
+        """
+        record_type = f"executions/bulk-delete-by-collection"
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, data=data)
 
     # ============== Workflows ===============
 
@@ -774,14 +792,14 @@ class CumulusApi:
         record_type = f"reconciliationReports/{report_name}"
         return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.GET, **kwargs)
 
-    def create_reconciliation_report(self, **kwargs):
+    def create_reconciliation_report(self, data={}, **kwargs):
         """
         Create a new reconciliation report.
         :param kwargs: Cumulus query strings and parameters
         :return: Request response
         """
         record_type = "reconciliationReports"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, **kwargs)
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, data=data, **kwargs)
 
     def delete_reconciliation_report(self, report_name):
         """
@@ -813,14 +831,14 @@ class CumulusApi:
 
     # ============== ORCA ===============
 
-    def post_orca(self, **kwargs):
+    def post_orca(self, endpoint, data, **kwargs):
         """
         This endpoint authenticates and forwards requests to the ORCA
         private API, and returns the response from the ORCA API.
         :return: Request response
         """
-        record_type = "orca"
-        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, **kwargs)
+        record_type = f"orca/{endpoint.strip('/')}"
+        return self.__crud_records(record_type=record_type, verb=self.allowed_verbs.POST, data=data, **kwargs)
 
     # ============== Dead Letter Archive ===============
     def recover_cumulus_messages(self, bucket: str = None, path: str = None) -> dict:
