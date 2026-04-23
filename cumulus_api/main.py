@@ -63,7 +63,7 @@ class CumulusApi:
             }
 
         else:
-            boto3.setup_default_session(profile_name=os.getenv('AWS_PROFILE'))
+            boto3.setup_default_session(profile_name=os.getenv('AWS_PROFILE'), region_name=os.getenv('AWS_REGION'))
             self.lambda_client = boto3.client('lambda')
             self.private_api_lambda_arn = os.getenv('PRIVATE_API_LAMBDA_ARN')
             self.crud_function = self.__use_private_api_lambda
