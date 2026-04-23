@@ -2,4 +2,5 @@ boto3
 cryptography
 pyOpenSSL
 requests
-requests-toolbelt
+# This library hasn't pushed a recent release but has updated its master branch
+requests-toolbelt @ git+https://github.com/requests/toolbelt.git@master
