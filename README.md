@@ -24,7 +24,7 @@ cml = CumulusApi()
 or add the path to the config file config.cfg to CumulusAPI instance as
 ```code
 from cumulus_api import CumulusApi
-cml = CumulusApi("path/to/config.cfg")
+cml = CumulusApi(config_path="path/to/config.cfg")
 ```
 
 Note: The order of precedence for instantiation is having set the `PRIVATE_API_LAMBDA_ARN`, a provided token, 
@@ -84,5 +84,8 @@ export LAUNCHPAD_URL=                      # most likely https://api.launchpad.n
 export FS_LAUNCHPAD_CERT=                  # local path to LAUNCHPAD pfx file
 export S3URI_LAUNCHPAD_CERT=               # S3 URI of LAUNCHPAD pfx file
 ```
+For private API calls, values in the supplied configuration file take precedence over the environment.
+If `AWS_PROFILE` or `AWS_REGION` is absent from the file, its environment value remains the fallback.
+
 If you are running this tool locally and using AWS hosted launchpad credentials then you may need to add your 
 AWS_PROFILE name to the config.
