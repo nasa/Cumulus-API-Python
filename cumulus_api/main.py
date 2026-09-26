@@ -63,9 +63,12 @@ class CumulusApi:
             }
 
         else:
-            boto3.setup_default_session(profile_name=os.getenv('AWS_PROFILE'), region_name=os.getenv('AWS_REGION'))
+            boto3.setup_default_session(
+                profile_name=config.get('AWS_PROFILE', os.getenv('AWS_PROFILE')),
+                region_name=config.get('AWS_REGION', os.getenv('AWS_REGION')),
+            )
             self.lambda_client = boto3.client('lambda')
-            self.private_api_lambda_arn = os.getenv('PRIVATE_API_LAMBDA_ARN')
+            self.private_api_lambda_arn = config['PRIVATE_API_LAMBDA_ARN']
             self.crud_function = self.__use_private_api_lambda
 
     def __use_endpoints(self, record_type, verb, data=None, auth=None, **kwargs):
