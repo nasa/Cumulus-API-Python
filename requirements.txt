@@ -3,4 +3,4 @@ cryptography
 pyOpenSSL
 requests
 # This library hasn't pushed a recent release but has updated its master branch
-requests-toolbelt @ git+https://github.com/requests/toolbelt.git@master
+requests-toolbelt @ git+https://github.com/requests/toolbelt.git@main
